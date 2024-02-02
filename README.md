@@ -1,4 +1,4 @@
-# eggd_ad_MANE_annotation
+# eggd_add_MANE_annotation
 This app takes an annotated VCF (output of eggd_VEP) and adds MANE info to VCF 
 ## Usage
 
@@ -8,7 +8,8 @@ To run the app:
 dx run app-GZ9FZ78457v7qjBXPXqGByyP \
     -i input_vcf_annotated \
     -t transcript_file \
-   
+
+```
 
 # Local Tool README
 
