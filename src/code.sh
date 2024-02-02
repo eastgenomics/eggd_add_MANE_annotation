@@ -18,14 +18,14 @@ main() {
     dx-download-all-inputs --parallel
 
     # run tool
-    python3 /add_MANE_annotation.py \
-        -i $input_file_path \
-        -f $transcript_file_path 
+    python3 add_MANE_annotation.py \
+        -i $input_vcf_annotated_path \
+        -t $transcript_file_path 
     # prepare outputs
     echo "All scripts finished successfully, uploading output files to dx"
-    if [ "$debug_fail_end" == 'true' ]; then exit 1; fi
-    mkdir -p ~/out/result_files/
-    mv *.vcf.gz ~/out/result_files/
+    mkdir -p /home/dnanexus/out/output_vcfs_annotated
+    output_vcf_annotated_mane=$(dx upload /home/dnanexus/out/output_vcfs_annotated/* --brief)
+    dx-jobutil-add-output output_vcf_annotated "$output_vcf_annotated_mane" --class=file
 
     # Upload output files
     dx-upload-all-outputs --parallel

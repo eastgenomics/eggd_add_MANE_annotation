@@ -19,21 +19,21 @@ def parse_args() -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser(
-        description='Information necessary for optimised filtering'
+        description='Information necessary for add MANE annotation'
     )
 
     # Add CLI arg of the input annotated VCF to have filtering flags added
     parser.add_argument(
         '-i',
-        '--input_file',
+        '--input_vcf_annotated',
         type=str,
         required=True,
         help='Annotated VCF file to have MANE annotation added'
     )
 
-    # Add CLI input of clinical indication string
+    # Add CLI input of MANE transcripts
     parser.add_argument(
-        '-p',
+        '-t',
         '--transcript_file',
         type=str,
         required=True,
@@ -63,9 +63,12 @@ def get_list_transcripts(transcript_file):
 
 def main():
     args = parse_args()
-    transcript_list = get_list_transcripts(transcript_file)
+    input_vcf_decompressed = vcf.decompress(
+        args.input_vcf_annotated
+    )
+    transcript_list = get_list_transcripts(args.transcript_file)
     vcf.add_annotation(
-        args.input_file, transcript_list
+        input_vcf_decompressed, transcript_list
     )
     vcf.compress(
         args.MANE_flagged_vcf

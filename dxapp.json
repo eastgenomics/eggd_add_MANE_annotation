@@ -1,34 +1,28 @@
 {
     "name": "eggd_add_MANE_annotation",
-    "title": "Add_MANE_annotation",
+    "title": "eggd_add_MANE_annotation",
     "summary": "Adds extra MANE info to VCF as a flag",
     "dxapi": "1.0.0",
     "version": "1.0.0",
     "inputSpec": [
         {
-        "name": "input_file",
+        "name": "input_vcf_annotated",
         "label": "input annotated VCF",
         "class": "file",
         "optional": false,
         "patterns": [ "*.vcf.gz"]
         },
         {
-        "name": "MANE_transcripts",
+        "name": "transcript_file",
         "label": "file with MANE transcripts in tsv format",
         "class": "file",
         "optional": false,
-        "patterns": ["*.tsv"],
-        "suggestions": [
-            {
-            "project": "project-GfxkbY84JkkxvVbXYv5z3948",
-            "id": "file-Gfxpkj04Jkkvx7VG22kpQK5z"
-            }
-        ]
+        "patterns": ["*.tsv"]
         }
     ],
     "outputSpec": [
         {
-        "name": "result_files",
+        "name": "output_vcf_annotated_mane",
         "label": "sample vcfs, with extra MANE flag added",
         "class": "file"
         }
@@ -41,7 +35,7 @@
         "file": "src/code.sh",
         "timeoutPolicy": {
         "*": {
-            "hours": 3
+            "hours": 1
         }
         },
         "assetDepends": [
@@ -50,12 +44,6 @@
             "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
             "folder": "/app_assets/htslib/htslib_v1.15.0",
             "version": "1.15.0"
-        },
-        {
-            "name": "python_packages",
-            "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-            "folder": "/app_assets/python_packages/python_packages_v1.1.0",
-            "version": "1.1.0"
         }
         ]
     },
@@ -66,10 +54,7 @@
         "org-emee_1"
     ],
     "access": {
-        "project": "CONTRIBUTE",
-        "network": [
-        "*"
-        ]
+        "project": "CONTRIBUTE"
     },
     "regionalOptions": {
         "aws:eu-central-1": {

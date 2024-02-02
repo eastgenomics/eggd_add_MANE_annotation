@@ -1,4 +1,4 @@
-###
+####
 # functions to apply to vcf from eggd_vep
 ###
 import os
@@ -12,11 +12,11 @@ from pysam import VariantFile
 # Get path of parent directory
 ROOT_DIR = Path(__file__).absolute().parents[1]
 
-def decompress(input_file):
+def decompress(input_vcf_annotated):
     """
     Parameters
     -----------
-    vcf : file
+    input_vcf_annotated : file
     path to file to be decompressed
 
     returns
@@ -25,14 +25,14 @@ def decompress(input_file):
 
     """
 
-    print(f"Calling bgzip -d on {file}")
+    print(f"Calling bgzip -d on {input_vcf_annotated}")
 
-    output_file = subprocess.run(['gzip', '-d', file])
+    output_file = subprocess.run(['gzip', '-d', input_vcf_annotated])
 
     return output_file
 
 
-def bcftools_pre_process(input_vcf) -> str:
+def bcftools_pre_process(input_vcf_decompressed) -> str:
     """
     Decompose multiple transcript annotations to individual records, and split
     VEP CSQ string fields to individual INFO keys. Adds a 'CSQ_' prefix to
@@ -41,7 +41,7 @@ def bcftools_pre_process(input_vcf) -> str:
 
     Parameters
     ----------
-    input_vcf : file
+    input_vcf_decompressed : file
         path to VCF file to be split
 
     Returns
@@ -57,14 +57,14 @@ def bcftools_pre_process(input_vcf) -> str:
     """
 
     print(
-        f"Splitting necessary fields from {input_vcf} "
+        f"Splitting necessary fields from {input_vcf_decompressed} "
         "with bcftools +split-vep"
     )
-    output_vcf = f"{Path(input_vcf).stem.split('.')[0]}.split.vcf"
+    output_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.split.vcf"
 
     # Check total rows before splitting out columns
     pre_split_total = subprocess.run(
-        f"zgrep -v '^#' {input_vcf} | wc -l",
+        f"zgrep -v '^#' {input_vcf_decompressed} | wc -l",
         shell=True,
         capture_output=True
     )
@@ -72,13 +72,13 @@ def bcftools_pre_process(input_vcf) -> str:
     # 'CSQ_{field}' as separate INFO fields. Remove original CSQ string
     cmd = (
         f"bcftools +split-vep --columns - -a CSQ -Ou -p 'CSQ_'"
-        f" -d {input_vcf} | bcftools annotate -x INFO/CSQ -o {output_vcf}"
+        f" -d {input_vcf_decompressed} | bcftools annotate -x INFO/CSQ -o {output_vcf}"
     )
 
     output = subprocess.run(cmd, shell=True, capture_output=True)
 
     assert output.returncode == 0, (
-        f"\n\tError in splitting VCF with bcftools +split-vep. VCF: {input_vcf}"
+        f"\n\tError in splitting VCF with bcftools +split-vep. VCF: {input_vcf_decompressed}"
         f"\n\tExitcode:{output.returncode}"
         f"\n\t{output.stderr.decode()}"
     )
@@ -106,14 +106,14 @@ def bcftools_pre_process(input_vcf) -> str:
     return output_vcf
 
 
-def read_in_vcf(vcf_file):
+def read_in_vcf(split_vcf):
     """
     Read in the VCF file with the pyvcf package and add a new header line
     for MANE field
 
     Parameters
     ----------
-    vcf_file : string
+    split_vcf : string
         name of the annotated VCF file 
 
     Returns
@@ -123,10 +123,10 @@ def read_in_vcf(vcf_file):
     sample_name : str
         the full name of the sample
     """
-    print(f"Reading in the split VCF {vcf_file} with pySAM")
+    print(f"Reading in the split VCF {split_vcf} with pySAM")
 
      # Read in and create pysam object of the VCF
-    vcf_contents = VariantFile(vcf_file, 'r')
+    vcf_contents = VariantFile(split_vcf, 'r')
 
     # Get the name of the sample from the VCF
     sample_name = list(vcf_contents.header.samples)[0]
@@ -139,7 +139,7 @@ def read_in_vcf(vcf_file):
     return vcf_contents, sample_name
 
 
-def add_MANE_field(vcf_contents, transc) -> dict:
+def add_MANE_field(vcf_contents, transcript_list) -> dict:
     """
     Add MANE INFO field to each variant 
 
@@ -147,67 +147,67 @@ def add_MANE_field(vcf_contents, transc) -> dict:
     ----------
     vcf_contents : pysam.VariantFile object
         pysam object containing all the VCF's info
-    panel_dict : dict
-        default dict with gene symbol as key and gene info as val
+    transcript_list : list
+        list with MANE transcripts
 
     Returns
     -------
-    gene_variant_dict : dict
-        dictionary of each gene with value as a list of all variants in that
-        gene (plus additional INFO field)
+    transcript_variant_dict : dict
+        dictionary of each gene with transcript key and variants items
+        form the CSQ_Feature
     """
     # Add each variant in a gene/entity to a dict, with gene as key and list
     # of variants as value
-    gene_variant_dict = defaultdict(list)
+    transcript_variant_dict = defaultdict(list)
     for variant_record in vcf_contents:
-        gene = variant_record.info['CSQ_Feature'][0]
-        gene_variant_dict[gene].append(variant_record)
+        transcript = variant_record.info['CSQ_Feature'][0]
+        transcript_variant_dict[transcript].append(variant_record)
 
-    # For each gene, check whether certain gene info is available
-    for gene, variant_list in gene_variant_dict.items():
-        gene_present = gene_mane = False
-        if gene in transc:
-            gene_present = True
-            gene_mane = "MANE"
+    # For each transcript, check whether it is on the transcript_list
+    for transcript, variant_list in transcript_variant_dict.items():
+        transcript_present = transcript_mane = False
+        if transcript in transcript_list:
+            transcript_present = True
+            transcript_mane = "MANE"
 
         # Iterate over all of the variants called in that gene
-        # If gene present in mane_list and gene_mane is present,
-        # add the MANE we've taken from PanelApp to variant info
-        # otherwise set it to unknown
+        # If transcript present in mane_list and transcript_mane is present,
+        # add MANE 
+        # otherwise set it to not MANE
         for variant in variant_list:
-            if all([gene_present, gene_mane]):
+            if all([transcript_present, transcript_mane]):
                 variant.info['MANE'] = 1
             else:
                 variant.info['MANE'] = 0
 
-    return gene_variant_dict
+    return transcript_variant_dict
 
 
-def write_out_flagged_vcf(flagged_vcf, gene_variant_dict, vcf_contents):
+def write_out_flagged_vcf(MANE_flagged_vcf, transcript_variant_dict, vcf_contents):
     """
     Write out each variant record to VCF using pysam
 
     Parameters
     ----------
-    flagged_vcf : str
+    MANE_flagged_vcf : str
         Name of the VCF to be written out with flags added
-    gene_variant_dict : dict
-        dictionary with each gene and value as all of the variants in that gene
+    transcript_variant_dict : dict
+        dictionary with each transcript and variant records
         as list
     vcf_contents : pysam.VariantFile object
         the contents of the VCF as a pysam object
     """
-    print(f"Writing out flagged variants to VCF: {flagged_vcf}")
+    print(f"Writing out flagged variants to VCF: {MANE_flagged_vcf}")
 
-    with VariantFile(flagged_vcf, 'w', header=vcf_contents.header) as out_vcf:
+    with VariantFile(MANE_flagged_vcf, 'w', header=vcf_contents.header) as out_vcf:
         # For each gene, write out each variant to VCF with extra INFO field
-        for gene, variant_list in gene_variant_dict.items():
+        for transcript, variant_list in transcript_variant_dict.items():
             for variant in variant_list:
                 out_vcf.write(variant)
 
 
 def check_written_out_vcf(
-        original_vcf_contents, gene_variant_dict, flagged_vcf
+        original_vcf_contents, transcript_variant_dict, MANE_flagged_vcf
     ):
     """
     Check that the VCF file written out is exactly the same as the header
@@ -217,9 +217,8 @@ def check_written_out_vcf(
     ----------
     original_vcf_contents : pysam.VariantFile object
         the pysam object which was to be written to file
-    gene_variant_dict : dict
-        dictionary with each gene and value as all of the variants in that gene
-        as list
+    transcript_variant_dict : dict
+        dictionary with each transcript and variant records as list
     flagged_vcf : file
         the VCF that was written out to be read back in with pysam
     Raises
@@ -229,7 +228,7 @@ def check_written_out_vcf(
         not match the VCF which was actually written out
     """
     # Read in the VCF (that was just written out) back in with pysam
-    flagged_contents = VariantFile(flagged_vcf, 'r')
+    flagged_contents = VariantFile(MANE_flagged_vcf, 'r')
 
     # Get list of lines in original header that was written out
     # Get list of variant records which were to be written out
@@ -238,7 +237,7 @@ def check_written_out_vcf(
         str(header) for header in original_vcf_contents.header.records
     ))
     original_records = [
-        str(var) for variant_list in gene_variant_dict.values()
+        str(var) for variant_list in transcript_variant_dict.values()
         for var in variant_list
     ]
     original_contents = original_header + original_records
@@ -260,7 +259,7 @@ def check_written_out_vcf(
     )
 
 
-def bcftools_sort(input_vcf):
+def bcftools_sort(input_vcf_decompressed):
     """
     Sort the VCF. As we write out variants in gene order, if a
     variant is annotated to multiple genes/transcripts and split, we can end up
@@ -268,8 +267,8 @@ def bcftools_sort(input_vcf):
 
     Parameters
     ----------
-    input_vcf : str
-        path to filtered VCF to sort
+    input_vcf_decompressed : str
+        path to annotated decompressed VCF to sort
     output_vcf : str
         name of output sorted VCF
 
@@ -277,23 +276,29 @@ def bcftools_sort(input_vcf):
     -------
     {vcf}.sorted.vcf : file
         sorted vcf file output from bcftools
+
+    Raises
+    -------
+    AssertionError
+        Raised when number of variants before and after bcftools sort do not match
     """
-    print(f"Sorting flagged VCF {input_vcf} with bcftools sort")
-    output_vcf = f"{Path(input_vcf).stem.split('.')[0]}.sorted.vcf"
+    
+    print(f"Sorting flagged VCF {input_vcf_decompressed} with bcftools sort")
+    output_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.sorted.vcf"
 
     # Check total rows before running bcftools sort
     pre_sort_total = subprocess.run(
-        f"zgrep -v '^#' {input_vcf} | wc -l",
+        f"zgrep -v '^#' {input_vcf_decompressed} | wc -l",
         shell=True,
         capture_output=True
     )
 
-    cmd = f"bcftools sort {input_vcf} -o {output_vcf}"
+    cmd = f"bcftools sort {input_vcf_decompressed} -o {output_vcf}"
 
     output = subprocess.run(cmd, shell=True, capture_output=True)
 
     assert output.returncode == 0, (
-        f"\n\tError in sorting VCF with bcftools. VCF: {input_vcf}"
+        f"\n\tError in sorting VCF with bcftools. VCF: {input_vcf_decompressed}"
         f"\n\tExitcode:{output.returncode}"
         f"\n\t{output.stderr.decode()}"
     )
@@ -350,7 +355,7 @@ def bgzip(file) -> None:
 
 
 
-def add_annotation(input_file, transc):
+def add_annotation(input_vcf_decompressed, transcript_list):
     """
     Main function to take a VCF and add the INFO field required for filtering
 
@@ -363,31 +368,26 @@ def add_annotation(input_file, transc):
     filter_command : str
         full bcftools filter command
     """
-    annotated_vcf = f"{Path(input_file)}"
-    split_vcf = f"{Path(input_file).stem.split('.')[0]}.split.vcf"
-    MANE_flagged_vcf = f"{Path(input_file).stem.split('.')[0]}.flagged.vcf"
-    sorted_vcf = f"{Path(input_file).stem.split('.')[0]}.sorted.vcf"
+    split_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.split.vcf"
+    MANE_flagged_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.mane.flagged.vcf"
+    sorted_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.sorted.vcf"
 
-    #decompress .vcf.gz file from vep output
-    input_vcf = decompress(input_file)
   
     # separate csq fields (creates split_vcf)
-    bcftools_pre_process(input_vcf)
+    bcftools_pre_process(input_vcf_decompressed)
 
     # create pysam object of vcf for flagging
     vcf_contents, sample_name = read_in_vcf(split_vcf)
 
     # add MANE field from config
-    gene_var_dict = add_MANE_field(vcf_contents, transc)
-    write_out_flagged_vcf(MANE_flagged_vcf, gene_var_dict, vcf_contents)
-    check_written_out_vcf(vcf_contents, gene_var_dict, MANE_flagged_vcf)
+    transcript_variant_dict = add_MANE_field(vcf_contents, transcript_list)
+    write_out_flagged_vcf(MANE_flagged_vcf, transcript_variant_dict, vcf_contents)
+    check_written_out_vcf(vcf_contents, transcript_variant_dict, MANE_flagged_vcf)
     bcftools_sort(MANE_flagged_vcf)
 
     bgzip(MANE_flagged_vcf)
-    os.remove(annotated_vcf)
     os.remove(split_vcf)
     os.remove(sorted_vcf)
-
 
 
 
