@@ -27,9 +27,10 @@ def decompress(input_vcf_annotated):
 
     print(f"Calling bgzip -d on {input_vcf_annotated}")
 
-    output_file = subprocess.run(['gzip', '-d', input_vcf_annotated])
+    output_file = subprocess.run(['bgzip', '-d', input_vcf_annotated])
+    output_path = os.path.splitext(input_vcf_annotated)[0]
 
-    return output_file
+    return output_path
 
 
 def bcftools_pre_process(input_vcf_decompressed) -> str:
@@ -106,15 +107,16 @@ def bcftools_pre_process(input_vcf_decompressed) -> str:
     return output_vcf
 
 
-def read_in_vcf(split_vcf):
+def read_in_vcf(split_vcf, transcript_file):
     """
     Read in the VCF file with the pyvcf package and add a new header line
-    for MANE field
+    for MANE field and version (with transcript list)
 
     Parameters
     ----------
     split_vcf : string
         name of the annotated VCF file 
+    transcript_file : path to transcript file 
 
     Returns
     -------
@@ -131,7 +133,9 @@ def read_in_vcf(split_vcf):
     # Get the name of the sample from the VCF
     sample_name = list(vcf_contents.header.samples)[0]
 
-    # Add MANE as INFO field
+    # Add MANE as INFO field and line with MANE transcripts version
+    MANE_transcript_version = os.path.splitext(transcript_file)[0]
+    vcf_contents.header.add_line(f'##MANE_transcripts={MANE_transcript_version}')
     vcf_contents.header.info.add(
         "MANE", "0", "Flag",
         "Check if Matched Annotation from NCBI and EMBL-EBI (MANE)")
@@ -355,7 +359,7 @@ def bgzip(file) -> None:
 
 
 
-def add_annotation(input_vcf_decompressed, transcript_list):
+def add_annotation(input_vcf_decompressed, transcript_file, transcript_list):
     """
     Main function to take a VCF and add the INFO field required for filtering
 
@@ -377,7 +381,7 @@ def add_annotation(input_vcf_decompressed, transcript_list):
     bcftools_pre_process(input_vcf_decompressed)
 
     # create pysam object of vcf for flagging
-    vcf_contents, sample_name = read_in_vcf(split_vcf)
+    vcf_contents, sample_name = read_in_vcf(split_vcf, transcript_file)
 
     # add MANE field from config
     transcript_variant_dict = add_MANE_field(vcf_contents, transcript_list)

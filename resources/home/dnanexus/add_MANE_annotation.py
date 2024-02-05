@@ -68,10 +68,7 @@ def main():
     )
     transcript_list = get_list_transcripts(args.transcript_file)
     vcf.add_annotation(
-        input_vcf_decompressed, transcript_list
-    )
-    vcf.compress(
-        args.MANE_flagged_vcf
+        input_vcf_decompressed, args.transcript_file, transcript_list
     )
 
 if __name__ == "__main__":
