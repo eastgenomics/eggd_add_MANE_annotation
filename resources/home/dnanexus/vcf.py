@@ -134,7 +134,7 @@ def read_in_vcf(split_vcf, transcript_file):
     sample_name = list(vcf_contents.header.samples)[0]
 
     # Add MANE as INFO field and line with MANE transcripts version
-    MANE_transcript_version = os.path.splitext(transcript_file)[0]
+    MANE_transcript_version = os.path.splitext(transcript_file)
     vcf_contents.header.add_line(f'##MANE_transcripts={MANE_transcript_version}')
     vcf_contents.header.info.add(
         "MANE", "0", "Flag",
