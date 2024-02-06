@@ -23,9 +23,8 @@ main() {
         -t $transcript_file_path 
     # prepare outputs
     echo "All scripts finished successfully, uploading output files to dx"
-    mkdir -p /home/dnanexus/out/output_vcfs_annotated
-    output_vcf_annotated_mane=$(dx upload /home/dnanexus/out/output_vcfs_annotated/* --brief)
-    dx-jobutil-add-output output_vcf_annotated "$output_vcf_annotated_mane" --class=file
+    mkdir -p ~/out/output_vcf_annotated_mane/
+    mv *.vcf.gz ~/out/output_vcf_annotated_mane/
 
     # Upload output files
     dx-upload-all-outputs --parallel
