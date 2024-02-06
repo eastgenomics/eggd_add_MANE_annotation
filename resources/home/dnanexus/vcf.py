@@ -115,8 +115,8 @@ def read_in_vcf(split_vcf, transcript_file):
     Parameters
     ----------
     split_vcf : string
-        name of the annotated VCF file 
-    transcript_file : path to transcript file 
+        name of the annotated VCF file
+    transcript_file : path to transcript file
 
     Returns
     -------
@@ -134,7 +134,7 @@ def read_in_vcf(split_vcf, transcript_file):
     sample_name = list(vcf_contents.header.samples)[0]
 
     # Add MANE as INFO field and line with MANE transcripts version
-    MANE_transcript_version = os.path.splitext(transcript_file)
+    MANE_transcript_version = os.path.basename(transcript_file)
     vcf_contents.header.add_line(f'##MANE_transcripts={MANE_transcript_version}')
     vcf_contents.header.info.add(
         "MANE", "0", "Flag",
@@ -356,8 +356,6 @@ def bgzip(file) -> None:
         f"\n\tExitcode:{output.returncode}"
         f"\n\t{output.stderr.decode()}"
     )
-
-
 
 def add_annotation(input_vcf_decompressed, transcript_file, transcript_list):
     """
