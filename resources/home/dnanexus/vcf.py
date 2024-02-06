@@ -357,6 +357,7 @@ def bgzip(file) -> None:
         f"\n\t{output.stderr.decode()}"
     )
 
+
 def add_annotation(input_vcf_decompressed, transcript_file, transcript_list):
     """
     Main function to take a VCF and add the INFO field required for filtering
