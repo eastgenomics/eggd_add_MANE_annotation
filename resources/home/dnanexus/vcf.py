@@ -171,9 +171,9 @@ def add_MANE_field(vcf_contents, transcript_file_table) -> dict:
     for transcript, variant_list in transcript_variant_dict.items():
         transcript_present = transcript_mane = False
         if transcript in transcript_file_table['RefSeq_nuc'].values:
-            #if transcript in transcript_file_table
-            #retrieve value from column 'MANE_status' 
-            #for specification of Select or Plus Clinical
+            # if transcript in transcript_file_table
+            # retrieve value from column 'MANE_status'
+            # for specification of Select or Plus Clinical
             transcript_file_table_index = transcript_file_table[transcript_file_table['RefSeq_nuc'] == transcript].index[0]
             transcript_mane = transcript_file_table.loc[transcript_file_table_index, 'MANE_status']
             transcript_present = True
