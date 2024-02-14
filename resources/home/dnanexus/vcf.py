@@ -186,7 +186,7 @@ def add_MANE_field(vcf_contents, transcript_file_table) -> dict:
             if all([transcript_present, transcript_mane]):
                 variant.info['MANE'] = transcript_mane
             else:
-                variant.info['MANE'] = 'Not MANE'
+                variant.info['MANE'] = 'No'
 
     return transcript_variant_dict
 
