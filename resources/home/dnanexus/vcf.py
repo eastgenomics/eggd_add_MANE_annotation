@@ -116,7 +116,7 @@ def read_in_vcf(split_vcf, transcript_file):
     ----------
     split_vcf : string
         name of the annotated VCF file
-    transcript_file : path to transcript file
+    transcript_file : path to MANE transcript file
 
     Returns
     -------
@@ -137,13 +137,13 @@ def read_in_vcf(split_vcf, transcript_file):
     MANE_transcript_version = os.path.basename(transcript_file)
     vcf_contents.header.add_line(f'##MANE_transcripts={MANE_transcript_version}')
     vcf_contents.header.info.add(
-        "MANE", "0", "Flag",
+        "MANE", ".", "String",
         "Check if Matched Annotation from NCBI and EMBL-EBI (MANE)")
 
     return vcf_contents, sample_name
 
 
-def add_MANE_field(vcf_contents, transcript_list) -> dict:
+def add_MANE_field(vcf_contents, transcript_file_table) -> dict:
     """
     Add MANE INFO field to each variant 
 
@@ -151,8 +151,8 @@ def add_MANE_field(vcf_contents, transcript_list) -> dict:
     ----------
     vcf_contents : pysam.VariantFile object
         pysam object containing all the VCF's info
-    transcript_list : list
-        list with MANE transcripts
+    transcript_file_table : dataframe
+        MANE transcript file contents
 
     Returns
     -------
@@ -167,22 +167,26 @@ def add_MANE_field(vcf_contents, transcript_list) -> dict:
         transcript = variant_record.info['CSQ_Feature'][0]
         transcript_variant_dict[transcript].append(variant_record)
 
-    # For each transcript, check whether it is on the transcript_list
+    # For each transcript, check whether it is on the transcript_file_table
     for transcript, variant_list in transcript_variant_dict.items():
         transcript_present = transcript_mane = False
-        if transcript in transcript_list:
+        if transcript in transcript_file_table['RefSeq_nuc'].values:
+            #if transcript in transcript_file_table
+            #retrieve value from column 'MANE_status' 
+            #for specification of Select or Plus Clinical
+            transcript_file_table_index = transcript_file_table[transcript_file_table['RefSeq_nuc'] == transcript].index[0]
+            transcript_mane = transcript_file_table.loc[transcript_file_table_index, 'MANE_status']
             transcript_present = True
-            transcript_mane = "MANE"
 
         # Iterate over all of the variants called in that gene
         # If transcript present in mane_list and transcript_mane is present,
-        # add MANE 
+        # add MANE status
         # otherwise set it to not MANE
         for variant in variant_list:
             if all([transcript_present, transcript_mane]):
-                variant.info['MANE'] = 1
+                variant.info['MANE'] = transcript_mane
             else:
-                variant.info['MANE'] = 0
+                variant.info['MANE'] = 'Not MANE'
 
     return transcript_variant_dict
 
@@ -358,18 +362,17 @@ def bgzip(file) -> None:
     )
 
 
-def add_annotation(input_vcf_decompressed, transcript_file, transcript_list):
+def add_annotation(input_vcf_decompressed, transcript_file, transcript_file_table):
     """
     Main function to take a VCF and add the INFO field required for filtering
 
     Parameters
     ----------
-    input_vcf : str
-        name of the input VCF
-    panel_dict : dict
-        default dict with each gene on panel as key and the gene info as val
-    filter_command : str
-        full bcftools filter command
+    input_vcf_decompressed : file
+        name of the decompressed input VCF annotated
+    transcript_file : transcript_file : path to MANE transcript file
+    transcript_file_table : dataframe
+        MANE transcript file contents
     """
     split_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.split.vcf"
     MANE_flagged_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.mane.flagged.vcf"
@@ -383,7 +386,7 @@ def add_annotation(input_vcf_decompressed, transcript_file, transcript_list):
     vcf_contents, sample_name = read_in_vcf(split_vcf, transcript_file)
 
     # add MANE field from config
-    transcript_variant_dict = add_MANE_field(vcf_contents, transcript_list)
+    transcript_variant_dict = add_MANE_field(vcf_contents, transcript_file_table)
     write_out_flagged_vcf(MANE_flagged_vcf, transcript_variant_dict, vcf_contents)
     check_written_out_vcf(vcf_contents, transcript_variant_dict, MANE_flagged_vcf)
     bcftools_sort(MANE_flagged_vcf)

@@ -4,7 +4,6 @@ Main script which takes a file and adds our flag for optimised filtering
 import argparse
 import re
 import pandas as pd
-
 import vcf
 
 
@@ -44,31 +43,16 @@ def parse_args() -> argparse.Namespace:
 
     return args
 
-def get_list_transcripts(transcript_file):
-    """
-    read the MANE file table and convert the transcripts column into a list
-
-    parameters
-    ----------
-    transcript_file: file of MANE transcripts in tsv format
-
-    output
-    ----------
-    list of mane transcripts    
-    """
-    table_mane = pd.read_csv(transcript_file, sep="\t")
-    transcript_list = table_mane['RefSeq_nuc'].to_list()
-
-    return transcript_list
-
 def main():
     args = parse_args()
     input_vcf_decompressed = vcf.decompress(
         args.input_vcf_annotated
     )
-    transcript_list = get_list_transcripts(args.transcript_file)
+    transcript_file_table = pd.read_table(
+    args.transcript_file
+    )
     vcf.add_annotation(
-        input_vcf_decompressed, args.transcript_file, transcript_list
+        input_vcf_decompressed, args.transcript_file, transcript_file_table
     )
 
 if __name__ == "__main__":
