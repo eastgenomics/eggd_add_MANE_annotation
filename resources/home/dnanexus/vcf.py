@@ -184,7 +184,7 @@ def add_MANE_field(vcf_contents, transcript_file_table) -> dict:
         # otherwise set it to not MANE
         for variant in variant_list:
             if all([transcript_present, transcript_mane]):
-                variant.info['MANE'] = transcript_mane
+                variant.info['MANE'] = transcript_mane.replace(' ', '_')
             else:
                 variant.info['MANE'] = 'No'
 

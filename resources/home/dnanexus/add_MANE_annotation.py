@@ -48,9 +48,7 @@ def main():
     input_vcf_decompressed = vcf.decompress(
         args.input_vcf_annotated
     )
-    transcript_file_table = pd.read_table(
-    args.transcript_file
-    )
+    transcript_file_table = pd.read_table(args.transcript_file)
     vcf.add_annotation(
         input_vcf_decompressed, args.transcript_file, transcript_file_table
     )
