@@ -91,8 +91,8 @@ def bcftools_pre_process(input_vcf_decompressed) -> str:
         capture_output=True
     )
 
-    pre_split = pre_split_total.stdout.decode()
-    post_split = post_split_total.stdout.decode()
+    pre_split = int(pre_split_total.stdout.decode())
+    post_split = int(post_split_total.stdout.decode())
 
     print(
         f"Total lines before splitting: {pre_split}"
@@ -318,8 +318,8 @@ def bcftools_sort(input_vcf_decompressed):
         capture_output=True
     )
 
-    pre_sort = pre_sort_total.stdout.decode()
-    post_sort = post_sort_total.stdout.decode()
+    pre_sort = int(pre_sort_total.stdout.decode())
+    post_sort = int(post_sort_total.stdout.decode())
 
     print(
         f"Total lines before sorting: {pre_sort}"

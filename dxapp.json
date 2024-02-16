@@ -17,13 +17,13 @@
         "label": "file with MANE transcripts in tsv format",
         "class": "file",
         "optional": false,
-        "patterns": ["*.tsv"]
+        "patterns": ["*.txt"]
         }
     ],
     "outputSpec": [
         {
         "name": "output_vcf_annotated_mane",
-        "label": "sample vcfs, with extra MANE flag added",
+        "label": "sample vcfs, with extra MANE field added",
         "class": "file"
         }
     ],
