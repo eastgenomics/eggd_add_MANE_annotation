@@ -267,7 +267,7 @@ def check_written_out_vcf(
     )
 
 
-def bcftools_sort(input_vcf_decompressed):
+def bcftools_sort(input_vcf_decompressed, output_vcf):
     """
     Sort the VCF. As we write out variants in gene order, if a
     variant is annotated to multiple genes/transcripts and split, we can end up
@@ -282,7 +282,7 @@ def bcftools_sort(input_vcf_decompressed):
 
     Outputs
     -------
-    {vcf}.sorted.vcf : file
+    {vcf}.mane.flagged.sorted.vcf : file
         sorted vcf file output from bcftools
 
     Raises
@@ -292,7 +292,7 @@ def bcftools_sort(input_vcf_decompressed):
     """
     
     print(f"Sorting flagged VCF {input_vcf_decompressed} with bcftools sort")
-    output_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.sorted.vcf"
+    output_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.mane.flagged.sorted.vcf"
 
     # Check total rows before running bcftools sort
     pre_sort_total = subprocess.run(
@@ -376,7 +376,7 @@ def add_annotation(input_vcf_decompressed, transcript_file, transcript_file_tabl
     """
     split_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.split.vcf"
     MANE_flagged_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.mane.flagged.vcf"
-    sorted_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.sorted.vcf"
+    sorted_vcf = f"{Path(input_vcf_decompressed).stem.split('.')[0]}.mane.flagged.sorted.vcf"
 
   
     # separate csq fields (creates split_vcf)
@@ -389,9 +389,9 @@ def add_annotation(input_vcf_decompressed, transcript_file, transcript_file_tabl
     transcript_variant_dict = add_MANE_field(vcf_contents, transcript_file_table)
     write_out_flagged_vcf(MANE_flagged_vcf, transcript_variant_dict, vcf_contents)
     check_written_out_vcf(vcf_contents, transcript_variant_dict, MANE_flagged_vcf)
-    bcftools_sort(MANE_flagged_vcf)
+    bcftools_sort(MANE_flagged_vcf, sorted_vcf)
 
-    bgzip(MANE_flagged_vcf)
+    bgzip(sorted_vcf)
     os.remove(split_vcf)
     os.remove(sorted_vcf)
 
